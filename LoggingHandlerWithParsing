@@ -1,0 +1,83 @@
+import javax.xml.soap.SOAPEnvelope;
+import javax.xml.soap.SOAPMessage;
+import javax.xml.soap.SOAPException;
+import javax.xml.soap.SOAPBody;
+import javax.xml.soap.SOAPFault;
+import javax.xml.namespace.QName;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.xpath.XPath;
+import javax.xml.xpath.XPathFactory;
+import javax.xml.xpath.XPathExpressionException;
+import javax.xml.xpath.XPathExpression;
+import org.w3c.dom.Document;
+import org.w3c.dom.NodeList;
+import org.xml.sax.SAXException;
+import java.io.IOException;
+import java.io.ByteArrayInputStream;
+import org.apache.axis.MessageContext;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+public class LoggingHandler extends BasicHandler {
+
+    private static final Logger logger = Logger.getLogger(LoggingHandler.class.getName());
+
+    @Override
+    public void invoke(MessageContext msgContext) {
+        try {
+            // Log request message
+            Message requestMessage = msgContext.getRequestMessage();
+            if (requestMessage != null) {
+                String request = requestMessage.getSOAPEnvelope().toString();
+                logger.info("Request by handler: " + extractDetails(requestMessage.getSOAPEnvelope()));
+            } else {
+                logger.info("Request by handler: MessageContext request message is null.");
+            }
+
+            // Invoke next handler in the chain
+            // No need to call super.invoke(msgContext)
+
+            // Log response message
+            Message responseMessage = msgContext.getResponseMessage();
+            if (responseMessage != null) {
+                String response = responseMessage.getSOAPEnvelope().toString();
+                logger.info("Response by handler: " + extractDetails(responseMessage.getSOAPEnvelope()));
+            } else {
+                logger.info("Response by handler: MessageContext response message is null.");
+            }
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Exception in LoggingHandler: " + e.getMessage(), e);
+        }
+    }
+
+    private String extractDetails(SOAPEnvelope envelope) {
+        String result = "";
+        try {
+            SOAPBody body = envelope.getBody();
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document document = builder.parse(new ByteArrayInputStream(body.getTextContent().getBytes()));
+
+            XPathFactory xPathFactory = XPathFactory.newInstance();
+            XPath xpath = xPathFactory.newXPath();
+
+            // Extract clientSessionID
+            XPathExpression sessionIdExpr = xpath.compile("//clientSessionID/text()");
+            NodeList sessionIdNodes = (NodeList) sessionIdExpr.evaluate(document, javax.xml.xpath.XPathConstants.NODESET);
+            if (sessionIdNodes.getLength() > 0) {
+                result += "clientSessionID: " + sessionIdNodes.item(0).getNodeValue() + "\n";
+            }
+
+            // Extract claimNumber
+            XPathExpression claimNumberExpr = xpath.compile("//claimNumber/text()");
+            NodeList claimNumberNodes = (NodeList) claimNumberExpr.evaluate(document, javax.xml.xpath.XPathConstants.NODESET);
+            if (claimNumberNodes.getLength() > 0) {
+                result += "claimNumber: " + claimNumberNodes.item(0).getNodeValue() + "\n";
+            }
+        } catch (SOAPException | IOException | SAXException | ParserConfigurationException | XPathExpressionException e) {
+            logger.log(Level.SEVERE, "Error extracting details from SOAP Envelope", e);
+        }
+        return result;
+    }
+}
