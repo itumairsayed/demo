@@ -29,13 +29,14 @@ Within the <service> tag, include the LoggingHandler in both the requestFlow and
         <handler type="LoggingHandler"/>
     </responseFlow>
 </service>
+```
 
-Important: To avoid conflicts, remove any existing axis.jar files from your project. The LoggingHandler JAR contains the necessary Axis 1.4 library, and having multiple versions of Axis in your classpath can lead to issues.
+### Important: To avoid conflicts, remove any existing axis.jar files from your project. The LoggingHandler JAR contains the necessary Axis 1.4 library, and having multiple versions of Axis in your classpath can lead to issues.
 
-Example Configuration
+### Example Configuration
 Here’s a complete example of how your wsdd file might look:
 
-<deployment>
+```<deployment>
     <handler name="LoggingHandler" type="java:com.example.axis.client.LoggingHandler"/>
 
     <service name="YourServiceName">
@@ -47,3 +48,4 @@ Here’s a complete example of how your wsdd file might look:
         </responseFlow>
     </service>
 </deployment>
+```
