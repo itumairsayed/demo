@@ -36,7 +36,8 @@ Within the <service> tag, include the LoggingHandler in both the requestFlow and
 ### Example Configuration
 Here’s a complete example of how your wsdd file might look:
 
-```<deployment>
+```
+<deployment>
     <handler name="LoggingHandler" type="java:com.example.axis.client.LoggingHandler"/>
 
     <service name="YourServiceName">
