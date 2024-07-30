@@ -18,9 +18,9 @@ You need to modify your `wsdd` file to register the `LoggingHandler`. Add the fo
 
 ```xml
 <handler name="LoggingHandler" type="java:com.example.axis.client.LoggingHandler"/>
-
+```
 Within the <service> tag, include the LoggingHandler in both the requestFlow and responseFlow configurations:
-
+```
 <service name="YourServiceName">
     <requestFlow>
         <handler type="LoggingHandler"/>
