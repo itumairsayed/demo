@@ -3,40 +3,49 @@ package com.example.eventhub.service;
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventHubClientBuilder;
 import com.azure.messaging.eventhubs.EventHubConsumerAsyncClient;
-import com.azure.messaging.eventhubs.EventHubConsumerClient;
-import com.azure.messaging.eventhubs.models.EventPosition;
 import com.azure.messaging.eventhubs.models.PartitionContext;
 
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
-import javax.ejb.Singleton;
-import javax.ejb.Startup;
+import javax.servlet.ServletContextEvent;
+import javax.servlet.ServletContextListener;
+import javax.servlet.annotation.WebListener;
 import java.nio.charset.StandardCharsets;
 
-@Singleton
-@Startup
-public class EventHubConsumerBean {
+@WebListener
+public class EventHubConsumerBean implements ServletContextListener {
 
     private EventHubConsumerAsyncClient consumerClient;
 
-    @PostConstruct
-    public void init() {
+    @Override
+    public void contextInitialized(ServletContextEvent sce) {
         String connectionString = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
         String eventHubName = "eh1";
 
         // Initialize the consumer client
         this.consumerClient = new EventHubClientBuilder()
                 .connectionString(connectionString, eventHubName)
-                .consumerGroup(EventHubClientBuilder.DEFAULT_CONSUMER_GROUP_NAME)
                 .buildAsyncConsumerClient();
 
         // Start receiving events
         startReceiving();
     }
 
+//    @PostConstruct
+//    public void init() {
+//        String connectionString = "Endpoint=sb://localhost;SharedAccessKeyName=RootManageSharedAccessKey;SharedAccessKey=SAS_KEY_VALUE;UseDevelopmentEmulator=true;";
+//        String eventHubName = "eh1";
+//
+//        // Initialize the consumer client
+//        this.consumerClient = new EventHubClientBuilder()
+//                .connectionString(connectionString, eventHubName)
+//                .buildAsyncConsumerClient();
+//
+//        // Start receiving events
+//        startReceiving();
+//    }
+
     private void startReceiving() {
 
-        consumerClient.receiveFromPartition("0", EventPosition.latest())
+        consumerClient.receive(false)
                 .subscribe(
                         partitionEvent -> {
                             EventData event = partitionEvent.getData();
@@ -54,8 +63,15 @@ public class EventHubConsumerBean {
                 );
     }
 
-    @PreDestroy
-    public void cleanup() {
+//    @PreDestroy
+//    public void cleanup() {
+//        if (consumerClient != null) {
+//            consumerClient.close();
+//        }
+//    }
+
+    @Override
+    public void contextDestroyed(ServletContextEvent sce) {
         if (consumerClient != null) {
             consumerClient.close();
         }
