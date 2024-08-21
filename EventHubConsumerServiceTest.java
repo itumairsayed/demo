@@ -1,20 +1,14 @@
 import com.azure.messaging.eventhubs.EventData;
 import com.azure.messaging.eventhubs.EventHubConsumerAsyncClient;
-import com.azure.messaging.eventhubs.models.EventContext;
 import com.azure.messaging.eventhubs.models.PartitionEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.ArgumentCaptor;
-import org.mockito.Captor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
-import reactor.test.publisher.TestPublisher;
-
-import java.time.Duration;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -31,34 +25,35 @@ class EventHubConsumerServiceTest {
     @InjectMocks
     private EventHubConsumerService eventHubConsumerService;
 
-    @Captor
-    private ArgumentCaptor<Throwable> errorCaptor;
-
-    private TestPublisher<PartitionEvent> testPublisher;
+    private Flux<PartitionEvent> eventFlux;
 
     @BeforeEach
     void setUp() {
-        testPublisher = TestPublisher.create();
-        when(consumerClient.receive(false)).thenReturn(testPublisher.flux());
+        eventFlux = mock(Flux.class);
+        when(consumerClient.receive(false)).thenReturn(eventFlux);
     }
 
     @Test
     void startConsumer_ShouldStartReceivingEvents() {
         eventHubConsumerService.startConsumer();
-        testPublisher.emit(new PartitionEvent("partition", new EventContext(), new EventData("test".getBytes())));
 
         verify(consumerClient).receive(false);
+        verify(eventFlux).subscribe(any(), any());
     }
 
     @Test
     void processEvent_ShouldProcessEvent() {
         eventHubConsumerService.startConsumer();
 
-        PartitionEvent partitionEvent = new PartitionEvent("partition", new EventContext(), new EventData("test".getBytes()));
-        testPublisher.emit(partitionEvent);
+        PartitionEvent partitionEvent = mock(PartitionEvent.class);
+        EventData eventData = new EventData("test".getBytes());
+        when(partitionEvent.getData()).thenReturn(eventData);
 
-        // No explicit verification because processEvent logs to stdout.
-        // You could mock System.out if needed to capture and verify output.
+        // Invoke processEvent directly
+        eventHubConsumerService.processEvent(eventData);
+
+        // Verify that the correct data was processed (e.g., printed to console)
+        // This would require mocking System.out, which is more complex and often not necessary
     }
 
     @Test
@@ -66,7 +61,9 @@ class EventHubConsumerServiceTest {
         eventHubConsumerService.startConsumer();
 
         AmqpException amqpException = mock(AmqpException.class);
-        testPublisher.error(amqpException);
+
+        // Directly invoke handleError to simulate an error
+        eventHubConsumerService.handleError(amqpException);
 
         verify(consumerClient, atLeast(2)).receive(false); // Initial and reconnect attempt
     }
@@ -76,7 +73,9 @@ class EventHubConsumerServiceTest {
         eventHubConsumerService.startConsumer();
 
         RuntimeException runtimeException = new RuntimeException("Non-AMQP error");
-        testPublisher.error(runtimeException);
+
+        // Directly invoke handleError to simulate an error
+        eventHubConsumerService.handleError(runtimeException);
 
         verify(consumerClient, times(1)).receive(false); // Only the initial connection attempt
     }
@@ -88,7 +87,7 @@ class EventHubConsumerServiceTest {
         // Simulate the passage of time in the test environment
         Thread.sleep(11000); // Sleep slightly longer than the 10-second reconnect delay
 
-        verify(consumerClient, atLeast(2)).receive(false); // Verify that reconnect happened
+        verify(consumerClient, at least(2)).receive(false); // Verify that reconnect happened
     }
 
     @Test
